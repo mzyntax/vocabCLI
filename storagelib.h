@@ -1,11 +1,14 @@
-int append_to_file(char *filename, FILE **fp)
+#pragma once
 
-int read_write_file(char *filename, FILE **fp)
+#include "flashcard.h"
 
-int get_all_flashcards(bool print)
+int append_to_file(char *filename, FILE **fp);
 
-int new_index(int *index)
+int read_write_file(char *filename, FILE **fp);
 
-void save_flashcard (int index, char *english_word, char *spanish_word, int familiarity, bool ignore)
+int update_flashcard (int index, char *english_word, char *spanish_word,
+                     int familiarity, int attempts, int correct);
 
-void query_flashcard (int index, Flashcard *card)
+int create_flashcard (Flashcard *card);
+
+int query_flashcard (int index, Flashcard *card);
