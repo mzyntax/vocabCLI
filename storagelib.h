@@ -7,7 +7,7 @@ int append_to_file(char *filename, FILE **fp);
 int read_write_file(char *filename, FILE **fp);
 
 int update_flashcard (int index, char *english_word, char *spanish_word,
-                     int familiarity, int attempts, int correct);
+                     float familiarity, float attempts, float correct);
 
 int create_flashcard (Flashcard *card);
 

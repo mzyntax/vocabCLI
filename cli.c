@@ -25,25 +25,23 @@ void to_upper(char *word) {
 }
 
 void display_all_flashcards () {
-    char buffer[255];
     Flashcard card;
     int amount = 0;
-    int result;
+    int result = 0;
     int *presult = &result;
 
     while (result == 0) {
         *presult = query_flashcard(amount, &card);
         if (*presult == -1) {
-            printf("Query Flashcard error");
             break;
         }
-        printf("Index: %d | Correct: %d | Attempts: %d | Familiarity: %d | ES: %s | EN: %s\n",
+        printf("Index: %d | Correct: %.2f | Attempts: %.2f | Familiarity: %.2f | ES: %s | EN: %s\n",
                 card.index, card.correct, card.attempts, card.familiarity, card.spanish_word, card.english_word);
         amount ++;
     }
 }
 
-void new_flashcard(){
+void new_flashcard() {
     char en_word[20];
     char es_word[20];
 
@@ -70,7 +68,7 @@ void edit_flashcard_options() {
     while (true) {
         query_flashcard(index, &card);
         printf("Edit options for Flashcard number: %d", index);
-        printf("1\nEN-Word: '%s' | 2\nES-Word: '%s' | 2\nFamiliarity: '%d' | 3\nAttempts: '%d' | 4\nCorrect: '%d' (0-4): ",
+        printf("1\nEN-Word: '%s' | 2\nES-Word: '%s' | 3\nFamiliarity: '%.2f' | 4\nAttempts: '%.2f' | 5\nCorrect: '%.2f' (0-5): ",
         card.english_word, card.spanish_word, card.familiarity, card.attempts, card.correct);
         scanf("%d", &user_edit_choice);
 
@@ -120,24 +118,28 @@ void quiz_start () {
         check_failure_response(result, "shuffle_flashcard");
 
         printf("\n| Beggining Quiz ! | Enter 'Quit' (Q) to exit |\n");
-        printf("Card chosen: %s | Familiarity: %d | Enter translation: ", card.spanish_word, card.familiarity);
+        printf("Card chosen: %s | Familiarity: %.2f | Enter translation: ", card.spanish_word, card.familiarity);
 
         scanf("%s", user_response);
         to_lower(user_response);
 
-        if (strcmp(user_response, "q") || strcmp(user_response, "quit")) {
+        if (strcmp(user_response, "q") == 0 || strcmp(user_response, "quit") == 0) {
             printf("\nExiting Quiz..\n");
             break;
         }
+
         ScoreOutcome outcome = score_english_translation(&card, user_response);
 
         switch (outcome) {
         case CORRECT_GUESS:
             printf("You guessed correctly !\n");
+            break;
         case INCORRECT_GUESS:
             printf("You guessed incorrectly..\n");
+            break;
         case INTERNAL_ERROR:
             printf("Internal error in function\n");
+            break;
         }
     }
 }
@@ -151,7 +153,7 @@ int main () {
 
         int result = scanf("%s", user_choice);
 
-        if (result != 1){
+        if (result == 0){
             printf("\nInvalid input!");
             break;
         }
@@ -159,19 +161,19 @@ int main () {
 
         to_upper(user_choice);
         
-        if (strcmp(user_choice, "QM") == 0) {
+        if (strcmp(user_choice, "F") == 0) {
             quiz_start();
-        } else if (strcmp(user_choice, "C") == 0) {
+        } else if (strcmp(user_choice, "N") == 0) {
             new_flashcard();
-        } else if (strcmp(user_choice, "S") == 0) {
+        } else if (strcmp(user_choice, "E") == 0) {
             edit_flashcard_options();
         } else if (strcmp(user_choice, "A") == 0) {
             display_all_flashcards();
-        } else if (strcmp(user_choice, "E") == 0) {
+        } else if (strcmp(user_choice, "Q") == 0) {
             break;
         } else {
-            printf("\nInvalid input!");
-            break;
+            printf("\nInvalid input!\n");
+            continue;
         }
     }
 

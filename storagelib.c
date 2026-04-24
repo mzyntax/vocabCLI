@@ -59,7 +59,7 @@ int new_index(int *index) {
 
 
 int update_flashcard (int index, char *english_word, char *spanish_word,
-                     int familiarity, int attempts, int correct) {
+                     float familiarity, float attempts, float correct) {
     FILE *fp;
     Flashcard card;
 
