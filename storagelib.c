@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "flashcard.h"
+#include "logger.h"
 
 int append_to_file(char *filename, FILE **fp) {
     *fp = fopen(filename, "ab+");
@@ -24,61 +25,33 @@ int read_write_file(char *filename, FILE **fp) {
             rewind(*fp);
         }
     }
-
-    return 0;
-}
-
-
-int new_index(int *index) {
-    FILE *fp;
-
-    int rw_result = read_write_file("build/index.bin", &fp);
-
-    if (rw_result != 0) {
-        return -1;
-    }
-
-    size_t read = fread(index, sizeof(*index), 1, fp);
-
-    if (read != 1) {
-        if (feof(fp)) {
-            *index += 0;
-    }} else if (read == 1) {
-        *index += 1;
-    }
-
-    size_t written = fwrite(index, sizeof(*index), 1, fp);
     
-    if (written != 1) {
-        return -1;
-    }
-    rewind(fp);
-    fclose(fp);
     return 0;
 }
 
 
-int update_flashcard (int index, char *english_word, char *spanish_word,
-                     float familiarity, float attempts, float correct) {
+int update_flashcard (Flashcard *card) {
     FILE *fp;
-    Flashcard card;
+    int card_size = sizeof(*card);
+    Flashcard cpycard;
 
-    card.index = index;
-    card.attempts = attempts;
-    card.correct = correct;
-    card.familiarity = familiarity;
-    strncpy(card.english_word, english_word, 20);
-    strncpy(card.spanish_word, spanish_word, 20);
+    cpycard.index = card->index;
+    cpycard.english_word = card->english_word;
+    cpycard.spanish_word = card->spanish_word;
+    cpycard.total_attempts = card->total_attempts;
+    cpycard.correct_attempts = card->correct_attempts;
+    cpycard.familiarity = card->familiarity;
+    cpycard.recency = card->recency;
 
     read_write_file("build/flashcards.bin", &fp);
 
-    int result = fseek(fp, index * sizeof(Flashcard), SEEK_SET);
+    int result = fseek(fp, card->index * card_size, SEEK_SET);
 
     if (result != 0) {
         return -1;
     }
 
-    size_t written = fwrite(&card, sizeof(Flashcard), 1, fp);
+    size_t written = fwrite(&cpycard, card_size, 1, fp);
 
     if (written != 1) {
         return -1;
@@ -90,19 +63,22 @@ int update_flashcard (int index, char *english_word, char *spanish_word,
 
 
 int create_flashcard (Flashcard *card) {
-    int index = 0;
     FILE *fp;
 
-    int idx_result = new_index(&index);
-
-    if (idx_result == -1) {
+    int read_result = read_write_file("build/flashcards.bin", &fp);
+    if (read_result != 0) {
         return -1;
     }
+
+    fseek(fp, 0, SEEK_END); 
+
+    long file_size = ftell(fp);
+
+    card->index = file_size / sizeof(Flashcard);
 
     int f_result = append_to_file("build/flashcards.bin", &fp);
 
     if (f_result != 0) {
-        printf("appened_to_file went wrong");
         return -1;
     }
 
@@ -132,5 +108,6 @@ int query_flashcard (int index, Flashcard *card) {
     if (query != 1) {
         return -1;
     }
+    fclose(fp);
     return 0;
 }

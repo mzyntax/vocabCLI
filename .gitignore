@@ -1,3 +1,7 @@
 build
 tester.c
 test.c
+test.h
+log.c
+test
+*claude

@@ -5,6 +5,11 @@
 #include "flashcard.h"
 #include "servicer.h"
 #include "storagelib.h"
+#include "logger.h"
+
+void cli_init() {
+    set_log_file("cli_logs");
+}
 
 void check_failure_response(int response, char *original_func) {
     if (response != 0) {
@@ -35,8 +40,8 @@ void display_all_flashcards () {
         if (*presult == -1) {
             break;
         }
-        printf("Index: %d | Correct: %.2f | Attempts: %.2f | Familiarity: %.2f | ES: %s | EN: %s\n",
-                card.index, card.correct, card.attempts, card.familiarity, card.spanish_word, card.english_word);
+        printf("Index: %d | Correct attempts: %.2f | Total attempts: %.2f | Familiarity: %.2f | ES: %s | EN: %s\n",
+                card.index, card.correct_attempts, card.total_attempts, card.familiarity, card.spanish_word, card.english_word);
         amount ++;
     }
 }
@@ -47,8 +52,10 @@ void new_flashcard() {
 
     printf("Enter english word: ");
     scanf("%s", en_word);
+    to_lower(en_word);
     printf("Enter spanish word: ");
     scanf("%s", es_word);
+    to_lower(es_word);
 
     int result = submit_flashcard_data(en_word, es_word);
     check_failure_response(result, "submit_flashcard_data");
@@ -56,56 +63,42 @@ void new_flashcard() {
 
 
 void edit_flashcard_options() {
-    int index;
-    int user_edit_choice;
-    char word_edit[20];
-    int num_edit;
+    int index, user_edit_choice, num_edit;
+    char *word_edit;
+    void *ptr = NULL;
     Flashcard card;
 
-    printf("Enter Flashcard index");
+    printf("\nEnter Flashcard index: ");
     scanf("%d", &index);
+    printf("Scanned");
 
     while (true) {
         query_flashcard(index, &card);
-        printf("Edit options for Flashcard number: %d", index);
-        printf("1\nEN-Word: '%s' | 2\nES-Word: '%s' | 3\nFamiliarity: '%.2f' | 4\nAttempts: '%.2f' | 5\nCorrect: '%.2f' (0-5): ",
-        card.english_word, card.spanish_word, card.familiarity, card.attempts, card.correct);
+        printf("Edit options for Flashcard number: %d", card.index);
+        printf("\n0) Exit\n1) EN-Word: '%s' | \n2) ES-Word: '%s' | \n3) Familiarity: '%.2f' | \n4) Total total_attempts: '%.2f' | \n5) correct_attempts total_attempts: '%.2f'\n> Choose Option (0-5): ",
+                                card.english_word, card.spanish_word, card.familiarity, card.total_attempts, card.correct_attempts);
+        printf("\nNew Insertion: ");
         scanf("%d", &user_edit_choice);
 
-        printf("New Insertion: ");
-
-        if (user_edit_choice == 1) {
+        if (user_edit_choice > 0 && user_edit_choice < 3) {
             scanf("%s", word_edit);
-            int en_result = edit_english_word(word_edit, index);
-            check_failure_response(en_result, "edit_english_word");
-
-        } else if (user_edit_choice == 2) {
-            scanf("%s", word_edit);
-            int es_result = edit_spanish_word(word_edit, index);
-            check_failure_response(es_result, "edit_spanish_word");
-
-        } else if (user_edit_choice == 3) {
+            ptr = &word_edit;
+        } else if (user_edit_choice > 3 && user_edit_choice < 5) {
             scanf("%d", &num_edit);
-            int fam_result = edit_familiarity_score(num_edit, index);
-            check_failure_response(fam_result, "edit_familiarity_score");
-
-        } else if (user_edit_choice == 4) {
-            scanf("%d", &num_edit);
-            int att_result = edit_total_attempts(num_edit, index);
-            check_failure_response(att_result, "edit_total_attempts");
-
-        } else if (user_edit_choice == 5) {
-            scanf("%d", &num_edit);
-            int cor_result = edit_correct_attempts(num_edit, index);
-            check_failure_response(cor_result, "edit_correct_attempts");
-
+            ptr = &num_edit;
         } else if (user_edit_choice == 0) {
             break;
-            
         } else {
             printf("Invalid entry!\n");
             break;
         }
+
+        if (ptr == NULL) {
+            printf("Pointer is NULL!\n");
+            return;
+        }
+        int e = edit_flashcard_attribute(&card, user_edit_choice, ptr);
+        check_failure_response(e, "edit_flashcard_attribute");
     }
 }
 
@@ -115,6 +108,7 @@ void quiz_start () {
     while (true) {
 
         int result = shuffle_flashcard(&card);
+
         check_failure_response(result, "shuffle_flashcard");
 
         printf("\n| Beggining Quiz ! | Enter 'Quit' (Q) to exit |\n");
@@ -128,24 +122,27 @@ void quiz_start () {
             break;
         }
 
-        ScoreOutcome outcome = score_english_translation(&card, user_response);
-
-        switch (outcome) {
-        case CORRECT_GUESS:
-            printf("You guessed correctly !\n");
-            break;
-        case INCORRECT_GUESS:
-            printf("You guessed incorrectly..\n");
-            break;
-        case INTERNAL_ERROR:
-            printf("Internal error in function\n");
-            break;
-        }
+        // ScoreOutcome outcome = score_english_translation(&card, user_response);
+  
+        // switch (outcome) {
+        // case CORRECT_GUESS:
+        //     printf("You guessed correctly !\n");
+        //     break;
+        // case INCORRECT_GUESS:
+        //     printf("You guessed incorrectly..\n");
+        //     break;
+        // case INTERNAL_ERROR:
+        //     printf("Internal error in function\n");
+        //     break;
+        // }
     }
 }
 
 
 int main () {
+    cli_init();
+    servicer_init();
+
     char user_choice[20];
     while (true) {
 
