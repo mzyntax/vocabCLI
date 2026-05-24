@@ -38,10 +38,7 @@ int update_flashcard (Flashcard *card) {
     cpycard.index = card->index;
     cpycard.english_word = card->english_word;
     cpycard.spanish_word = card->spanish_word;
-    cpycard.total_attempts = card->total_attempts;
-    cpycard.correct_attempts = card->correct_attempts;
-    cpycard.familiarity = card->familiarity;
-    cpycard.recency = card->recency;
+    cpycard.last_review = card->time_reviewed;
 
     read_write_file("build/flashcards.bin", &fp);
 
@@ -96,18 +93,19 @@ int create_flashcard (Flashcard *card) {
 
 int query_flashcard (int index, Flashcard *card) {
     FILE *fp;
-
     int result = read_write_file("build/flashcards.bin", &fp);
-
+    
     if (result != 0) {
         return -1;
     }
     fseek(fp, index * sizeof(*card), SEEK_SET);
+    
     size_t query = fread(card, sizeof(*card), 1, fp);
 
     if (query != 1) {
         return -1;
     }
+
     fclose(fp);
     return 0;
 }

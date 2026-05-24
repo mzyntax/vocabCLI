@@ -1,11 +1,38 @@
 #pragma once
+#include <time.h>
+
+typedef enum {
+    EASY,
+    GOOD,
+    HARD,
+    AGAIN,
+} Ratings; 
+
+typedef enum {
+    LEARNING,
+    REVIEW,
+    RELEARNING,
+} State;
 
 typedef struct {
     int index;
-    float correct_attempts;
-    float total_attempts;
-    float familiarity;
-    float recency;
+    TimeCard last_review;
+    float stability; // Time based constant for memory decay
+    float difficulty; // How hard is it for the user?
+    time_t due;
     char *spanish_word;
     char *english_word;
 } Flashcard ;
+
+typedef struct {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+} TimeCard ;
+
+// R = exp(ln(0.9) * elapsed_days / S)
+
+// S -> stability controls how fast the forgetting curve drops

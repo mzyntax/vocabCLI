@@ -63,29 +63,26 @@ void new_flashcard() {
 
 
 void edit_flashcard_options() {
-    int index, user_edit_choice, num_edit;
+    int index, user_edit_choice;
     char *word_edit;
     void *ptr = NULL;
     Flashcard card;
 
     printf("\nEnter Flashcard index: ");
     scanf("%d", &index);
-    printf("Scanned");
 
     while (true) {
-        query_flashcard(index, &card);
+        int qf = query_flashcard(index, &card);
+        check_failure_response(qf, "query_flashcard");
         printf("Edit options for Flashcard number: %d", card.index);
-        printf("\n0) Exit\n1) EN-Word: '%s' | \n2) ES-Word: '%s' | \n3) Familiarity: '%.2f' | \n4) Total total_attempts: '%.2f' | \n5) correct_attempts total_attempts: '%.2f'\n> Choose Option (0-5): ",
-                                card.english_word, card.spanish_word, card.familiarity, card.total_attempts, card.correct_attempts);
+        printf("\n0) Exit\n1) EN-Word: '%s' | \n2) ES-Word: '%s' | Choose Option (0-2): ",
+                             card.english_word, card.spanish_word);
         printf("\nNew Insertion: ");
         scanf("%d", &user_edit_choice);
 
         if (user_edit_choice > 0 && user_edit_choice < 3) {
             scanf("%s", word_edit);
             ptr = &word_edit;
-        } else if (user_edit_choice > 3 && user_edit_choice < 5) {
-            scanf("%d", &num_edit);
-            ptr = &num_edit;
         } else if (user_edit_choice == 0) {
             break;
         } else {
@@ -97,10 +94,30 @@ void edit_flashcard_options() {
             printf("Pointer is NULL!\n");
             return;
         }
-        int e = edit_flashcard_attribute(&card, user_edit_choice, ptr);
-        check_failure_response(e, "edit_flashcard_attribute");
+        int efa = edit_flashcard_attribute(&card, user_edit_choice, ptr);
+        check_failure_response(efa, "edit_flashcard_attribute");
     }
 }
+
+int user_rating () {
+    int user_diff;
+    printf("Rate flashcard difficulty: ");
+    scanf("%s",user_diff);
+    if (user_diff > 4) {
+        printf("(Input is greater than 4 -> submitting as 4)");
+        user_diff = 4;
+    } else if (user_diff < 1) {
+        printf("(Input is less than 1 -> submitting as 1)");
+        user_diff = 1;
+    }
+    return user_diff;
+}
+
+int gather_review_data(Flashcard *card) {
+    user_diff = user_rating();
+    log_reviewed_card(card, diff);
+}
+
 
 void quiz_start () {
     Flashcard card;
@@ -122,19 +139,21 @@ void quiz_start () {
             break;
         }
 
-        // ScoreOutcome outcome = score_english_translation(&card, user_response);
+        ScoreOutcome outcome = score_english_translation(&card, user_response);
   
-        // switch (outcome) {
-        // case CORRECT_GUESS:
-        //     printf("You guessed correctly !\n");
-        //     break;
-        // case INCORRECT_GUESS:
-        //     printf("You guessed incorrectly..\n");
-        //     break;
-        // case INTERNAL_ERROR:
-        //     printf("Internal error in function\n");
-        //     break;
-        // }
+        switch (outcome) {
+        case CORRECT_GUESS:
+            printf("You guessed correctly !\n");
+            gather_review_data(&card);
+            break;
+        case INCORRECT_GUESS:
+            printf("You guessed incorrectly..\n");
+            gather_review_data(&card);
+            break;
+        case INTERNAL_ERROR:
+            printf("Internal error in function\n");
+            break;
+        }
     }
 }
 
@@ -142,7 +161,6 @@ void quiz_start () {
 int main () {
     cli_init();
     servicer_init();
-
     char user_choice[20];
     while (true) {
 

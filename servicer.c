@@ -9,16 +9,11 @@
 #include "flashcard.h"
 #include "logger.h"
 
-// static struct {
-//     char *previous_card;
-// } hist;
-
 void servicer_init () {
     set_log_file("servicer_logs");
 }
 
 int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr) {
-
     switch (edit) {
     case ENGLISH_WORD:
         card->english_word = (char *) ptr;
@@ -26,16 +21,8 @@ int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr) {
     case SPANISH_WORD:
         card->spanish_word = (char *) ptr;
         break;
-    case RECENCY:
-        card->recency = *(int *) ptr;
-        break;
-    case TOTAL_ATTEMPTS:
-        card->total_attempts = *(int *) ptr;
-        break;
-    case CORRECT_ATTEMPTS:
-        card->correct_attempts = *(int *) ptr;
-        break; 
     }
+    
     int e = update_flashcard(card);
     if (e != 0) {
         return -1;
@@ -47,20 +34,17 @@ int submit_flashcard_data(char *en_word, char *es_word) {
     Flashcard card;
     Flashcard *pcard = &card;
 
-    card.total_attempts = 0;
-    card.correct_attempts = 0;
-    card.familiarity = 0;
-    card.recency = 0 ;
-
+    card.stability = 0
+    card.difficulty = 0
+    
     int en_size = strlen(en_word);
     int es_size = strlen(es_word);
-
-    printf("en_size %d\n", en_size);
-    printf("en_word %s\n", en_word);
 
     if (en_size < 20 && es_size < 20) {
         card.english_word = en_word;
         card.spanish_word = es_word;
+    } else {
+        return -1;
     }
 
     int result = create_flashcard(pcard);
@@ -103,6 +87,55 @@ int shuffle_flashcard (Flashcard *card) {
     return 0;
 }
 
+
+ScoreOutcome score_english_translation(Flashcard *card, char *en_guess) {
+    char *english_word = card->english_word;
+
+    bool correct_answer;
+
+    card->total_attempts += 1;
+    edit_total_attempts(card->total_attempts, card);
+
+    if (strcmp(english_word, en_guess) == 0) {
+        card->correct_attempts += 1;
+        edit_correct_attempts(card->total_attempts, card);
+        correct_answer = true;
+    } else {
+        correct_answer = false;
+    }
+
+    int calc_result = familiarity_calculation(card);
+    if (calc_result != 0) {
+        return INTERNAL_ERROR;
+        log_trace("Familiarity calculation failed");
+    }
+    if (correct_answer == true) {
+        return CORRECT_GUESS;
+    } else {
+        return INCORRECT_GUESS;
+    }
+
+    return INTERNAL_ERROR;
+}
+
+
+int log_reviewed_card(Flashcard *card, int difficulty) {
+    TimeCard time;
+    time_t now = time(NULL);
+    struct tm *local = localtime(&now);
+    time.year = local->tm_year + 1900;
+    time.month = local->tm_month + 1;
+    time.day = local->tm_day;
+    time.hour = local->tm_hour;
+    time.minute = local->tm_minute;
+    time.second = local->tm_second;
+
+    card->last_review = time;
+    card->difficulty = difficulty;
+    update_flashcard(card);
+}
+
+
 // int familiarity_calculation(Flashcard *card) {
 //     float total_attempts = card->total_attempts;
 //     float correct_attempts = card->correct_attempts;
@@ -113,35 +146,4 @@ int shuffle_flashcard (Flashcard *card) {
 //         return -1;
 //     }
 //     return 0;
-// }
-
-
-// ScoreOutcome score_english_translation(Flashcard *card, char *en_guess) {
-//     char *english_word = card->english_word;
-
-//     bool correct_answer;
-
-//     card->total_attempts += 1;
-//     edit_total_attempts(card->total_attempts, card);
-
-//     if (strcmp(english_word, en_guess) == 0) {
-//         card->correct_attempts += 1;
-//         edit_correct_attempts(card->total_attempts, card);
-//         correct_answer = true;
-//     } else {
-//         correct_answer = false;
-//     }
-
-//     int calc_result = familiarity_calculation(card);
-//     if (calc_result != 0) {
-//         return INTERNAL_ERROR;
-//         log_trace("Familiarity calculation failed");
-//     }
-//     if (correct_answer == true) {
-//         return CORRECT_GUESS;
-//     } else {
-//         return INCORRECT_GUESS;
-//     }
-
-//     return INTERNAL_ERROR;
 // }
