@@ -11,9 +11,6 @@ static struct {
 } queue;
 
 
-char *recency[] = {
-    "NEW", "YOUNG", "OLD"
-}
 void initialize_queue() {
     if (queue.initialized == true) {
         return;
@@ -62,15 +59,3 @@ int check_if_full(int size) {
         return 0;
     }
 }
-
-// int determine_recency(Flashcard *card) {
-//     if card
-// }
-
-// int metric_analysis(Flashcard *card) {
-//     double adj_decay = card->total_answers 
-//     double familiarity = card->correct_attempts / card->total_answers // implement user familiarity calculation
-    // start / add to / maybe signal if a decay is necessary
-    // based on results place into queue, possible seperate function?
-
-// }

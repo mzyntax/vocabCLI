@@ -32,8 +32,10 @@ int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr) {
 
 int submit_flashcard_data(char *en_word, char *es_word) {
     Flashcard card;
+    State new_state = LEARNING;
     Flashcard *pcard = &card;
 
+    card.state = LEARNING;
     card.stability = 0
     card.difficulty = 0
     
@@ -87,6 +89,29 @@ int shuffle_flashcard (Flashcard *card) {
     return 0;
 }
 
+int create_timecard(Timecard *time) {
+    time_t today = time(NULL);
+
+    struct tm *local = localtime(&now);
+
+    time->year = local->tm_year + 1900;
+    time->month = local->tm_month + 1;
+    time->day = local->tm_day;
+    time->hour = local->tm_hour;
+    time->minute = local->tm_minute;
+    time->second = local->tm_second;
+    return 0;
+}
+
+int log_reviewed_card(Flashcard *card, int difficulty) {
+    TimeCard time;
+    create_timecard(&time);
+
+    card->last_review = time;
+    card->difficulty = difficulty;
+    update_flashcard(card);
+}
+
 
 ScoreOutcome score_english_translation(Flashcard *card, char *en_guess) {
     char *english_word = card->english_word;
@@ -116,23 +141,6 @@ ScoreOutcome score_english_translation(Flashcard *card, char *en_guess) {
     }
 
     return INTERNAL_ERROR;
-}
-
-
-int log_reviewed_card(Flashcard *card, int difficulty) {
-    TimeCard time;
-    time_t now = time(NULL);
-    struct tm *local = localtime(&now);
-    time.year = local->tm_year + 1900;
-    time.month = local->tm_month + 1;
-    time.day = local->tm_day;
-    time.hour = local->tm_hour;
-    time.minute = local->tm_minute;
-    time.second = local->tm_second;
-
-    card->last_review = time;
-    card->difficulty = difficulty;
-    update_flashcard(card);
 }
 
 

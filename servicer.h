@@ -1,5 +1,4 @@
 #pragma once
-
 #include "flashcard.h"
 
 typedef enum {
@@ -13,8 +12,9 @@ typedef enum {
     SPANISH_WORD, // 1
 } EditType;
 
-
 int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr);
+
+int create_timecard(Timecard *card);
 
 int log_reviewed_card(Flashcard *card, int difficulty);
 

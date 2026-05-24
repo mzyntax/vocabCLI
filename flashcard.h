@@ -6,7 +6,7 @@ typedef enum {
     GOOD,
     HARD,
     AGAIN,
-} Ratings; 
+} Rating; 
 
 typedef enum {
     LEARNING,
@@ -17,8 +17,9 @@ typedef enum {
 typedef struct {
     int index;
     TimeCard last_review;
+    State state;
+    Rating rating; // How hard is it for the user?
     float stability; // Time based constant for memory decay
-    float difficulty; // How hard is it for the user?
     time_t due;
     char *spanish_word;
     char *english_word;

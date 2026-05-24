@@ -56,6 +56,7 @@ void new_flashcard() {
     printf("Enter spanish word: ");
     scanf("%s", es_word);
     to_lower(es_word);
+    
 
     int result = submit_flashcard_data(en_word, es_word);
     check_failure_response(result, "submit_flashcard_data");
