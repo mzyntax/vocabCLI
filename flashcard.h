@@ -16,7 +16,7 @@ typedef enum {
 
 typedef struct {
     int index;
-    TimeCard last_review;
+    TimeCard *last_review;
     State state;
     Rating rating; // How hard is it for the user?
     float stability; // Time based constant for memory decay

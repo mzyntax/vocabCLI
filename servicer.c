@@ -13,6 +13,35 @@ void servicer_init () {
     set_log_file("servicer_logs");
 }
 
+void debug_function(char *funcname) {
+    log_debug("Function %s has encountered an internal error", funcname); /*Only for external functions where 
+                                                                            error tracing is already accounted for*/
+}
+
+
+int create_timecard(Timecard *time) {
+    time_t today = time(NULL);
+
+    struct tm *local = localtime(&now);
+
+    time->year = local->tm_year + 1900;
+    time->month = local->tm_month + 1;
+    time->day = local->tm_day;
+    time->hour = local->tm_hour;
+    time->minute = local->tm_minute;
+    time->second = local->tm_second;
+    return 0;
+}
+
+int log_reviewed_card(Flashcard *card, int difficulty) {
+    TimeCard time;
+    create_timecard(&time);
+
+    card->last_review = time;
+    card->difficulty = difficulty;
+    update_flashcard(card);
+}
+
 int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr) {
     switch (edit) {
     case ENGLISH_WORD:
@@ -56,9 +85,10 @@ int submit_flashcard_data(char *en_word, char *es_word) {
     return 0;
 }
 
-int shuffle_flashcard (Flashcard *card) {
+int process_flashcards () {
     FILE *fp;
-
+    Flashcard card;
+    int card_size = sizeof(card);
     int read_result = read_write_file("build/flashcards.bin", &fp);
 
     if (read_result != 0) {
@@ -73,43 +103,34 @@ int shuffle_flashcard (Flashcard *card) {
         return -1;
     }
 
-    srand(time(NULL));
-    int index = rand() % amt;
+    for (int i = 0; i < amt; i++) {
 
-    fseek(fp, index * sizeof(*card), SEEK_SET);
+        fseek(fp, i * card_size, SEEK_SET);
+        size_t card_info = fread(&card, card_size, 1, fp);
+        if (card_info != 1) { return -1; }
+        
+        if (card.last_review == NULL) {
 
-    size_t card_info = fread(card, sizeof(*card), 1, fp);
+        }
+        calculate_stability(&card);
+        bool retained = check_retention(&card);
+        if (retained == false) {
+            queue_flashcard(&card);
+        }
+        if (retained == -1) {
+            debug_function("check_retention");
+    }
+    }
+    fclose(fp);
+    return 0;
+}
 
-    if (card_info != 1) {
-        return -1;
+int pull_from_queue(Flashcard *card) {
+    int d = dequeue(card);
+    if (d != 0) {
+        debug_function("dequeue");
     }
 
-    fclose(fp);
-
-    return 0;
-}
-
-int create_timecard(Timecard *time) {
-    time_t today = time(NULL);
-
-    struct tm *local = localtime(&now);
-
-    time->year = local->tm_year + 1900;
-    time->month = local->tm_month + 1;
-    time->day = local->tm_day;
-    time->hour = local->tm_hour;
-    time->minute = local->tm_minute;
-    time->second = local->tm_second;
-    return 0;
-}
-
-int log_reviewed_card(Flashcard *card, int difficulty) {
-    TimeCard time;
-    create_timecard(&time);
-
-    card->last_review = time;
-    card->difficulty = difficulty;
-    update_flashcard(card);
 }
 
 

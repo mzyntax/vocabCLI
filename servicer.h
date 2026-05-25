@@ -12,7 +12,7 @@ typedef enum {
     SPANISH_WORD, // 1
 } EditType;
 
-int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr);
+void servicer_init ();
 
 int create_timecard(Timecard *card);
 
@@ -20,8 +20,8 @@ int log_reviewed_card(Flashcard *card, int difficulty);
 
 int submit_flashcard_data(char *en_word, char *es_word);
 
-int shuffle_flashcard (Flashcard *card);
+int edit_flashcard_attribute(Flashcard *card, int edit, void *ptr);
+
+int process_flashcards();
 
 // ScoreOutcome score_english_translation(Flashcard *card, char *en_guess);
-
-void servicer_init ();

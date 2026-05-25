@@ -1,8 +1,4 @@
 build
-tester.c
-test.c
-test.h
 log.c
-test
 *claude
-formula_test.c
+*tests

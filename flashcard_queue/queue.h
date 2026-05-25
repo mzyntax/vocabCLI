@@ -5,8 +5,10 @@
 #include <stdbool.h>
 #include <time.h>
 
-void initialize_queue()
+void initialize_queue();
 
-int enqueue(Flashcard *card, int size)
+int enqueue(Flashcard *card, int size);
 
-int dequeue(Flashcard *card)
+int dequeue(Flashcard *card);
+
+queue_flashcard(Flashcard *card);

@@ -10,7 +10,7 @@
 
 #define TARGET_RETENTION 0.9
 
-int calculate_stability(Flashcard *card) {
+void calculate_stability(Flashcard *card) {
     float S;
     float multiplier;
     switch (card->state) {
@@ -33,9 +33,11 @@ int calculate_stability(Flashcard *card) {
     }
     card->stability = S;
     update_flashcard(card);
+
+    return;
 }
 
-int check_retention(Flashcard *card) {
+bool check_retention(Flashcard *card) {
     Timecard time;
     create_timecard(&time);
 
@@ -43,7 +45,14 @@ int check_retention(Flashcard *card) {
     float R = exp(log(TARGET_RETENTION) * elapsed_days / card->stability);
 
     if (R < TARGET_RETENTION) {
-        initialize_queue();
-        enqueue(card, sizeof(*card));
-    };
+        return false;
+    } else {
+        return true;
+    }
+}   return -1;
+
+void queue_flashcard(Flashcard *card) {
+    initialize_queue();
+    enqueue(card, sizeof(*card));
+    return;
 }
