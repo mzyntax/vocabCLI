@@ -1,11 +1,8 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdbool.h>
-#include <time.h>
-#include "flashcard.h"
+#include "../cards.h"
 
-void calculate_stability(Flashcard *card);
+float calculate_stability(Flashcard *card);
 
-void check_retention(Flashcard *card);
+bool check_retention(Flashcard *card, float stability);

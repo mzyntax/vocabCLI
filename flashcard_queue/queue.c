@@ -1,34 +1,23 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include "queue.h"
 
-void queue_init () {
-    set_log_file("queue_logs");
+
+void queue_init() {
+    set_log_file("logs/queue_logs");
 }
 
-static struct {
-    Flascard items[100];
-    int capacity;
-    int front;
-    int rear;
-    bool initialized;
-} queue;
-
-
-void initialize_queue() {
-    if (queue.initialized == true) {
-        return;
-    }
-    queue.capacity = 100;
-    queue.front = -1;
-    queue.rear = -1;
-    queue.initialized = true;
+void initialize_queue(Queue *q) {
+    q->capacity = 100;
+    q->front = 0;
+    q->rear = 0;
 }
 
 
-int check_if_empty() {
-    if (queue.capacity == 100) {
-        log_info("Queue is currently empty, could not dequeue");
+int check_if_empty(Queue *q) { //
+    if (q->capacity == 100) {
+        log_info("Queue is empty");
         return -1;
     } else {
         return 0;
@@ -36,9 +25,9 @@ int check_if_empty() {
     return -1;
 }
 
-int check_if_full(int size) {
-    if (queue.capacity < size) {
-        log_info("Queue is currently full, could not enqueue");
+int check_if_full(Queue *q) { //
+    if (q->capacity < 1) {
+        log_info("Queue is full");
         return -1;
     } else {
         return 0;
@@ -46,35 +35,36 @@ int check_if_full(int size) {
     return -1;
 }
 
-int enqueue(Flashcard *card, int size) {
-    int c = check_if_full(sizeof(&card));
+int return_queue_size(Queue *q) {
+    int cards_inserted;
+    cards_inserted = 100 - q->capacity;
+    log_info("Current cards inserted: %d", cards_inserted);
+    return cards_inserted;
+}
+
+int enqueue(Queue *q, Flashcard *card) {
+    int c = check_if_full(q);
 
     if (c == -1) {
         return c;
     }
 
-    int rear = queue.rear++;
-    queue.capacity -= size;
-    queue.items[rear] = value;
-    return 0
+    int rear = q->rear % 100;
+    q->rear++;
+    q->capacity--;
+    q->items[rear] = card;
+    return 0;
 }
 
-int dequeue(Flashcard *card) {
-    int e = check_if_empty()
+int dequeue(Queue *q, Flashcard *card) {
+    int e = check_if_empty(q);
 
     if (e == -1) {
         return e;
     }
 
-    int front = queue.front++;
-    &card = queue.items[front];
+    int front = q->front % 100;
+    q->front++;
+    *card = *q->items[front];
     return 0;
-}
-
-int queue_flashcard(Flashcard *card) {
-    initialize_queue();
-    int queued = enqueue(card, sizeof(*card));
-    if (queued != 0) {
-        return queued;
-    }
 }

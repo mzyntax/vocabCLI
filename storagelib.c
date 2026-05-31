@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <string.h>
-#include "flashcard.h"
+#include "cards.h"
 #include "logger.h"
+
+void storagelib_init () {
+    set_log_file("logs/storagelib_logs");
+}
 
 int append_to_file(char *filename, FILE **fp) {
     *fp = fopen(filename, "ab+");
@@ -36,11 +40,19 @@ int update_flashcard (Flashcard *card) {
     Flashcard cpycard;
 
     cpycard.index = card->index;
-    cpycard.english_word = card->english_word;
-    cpycard.spanish_word = card->spanish_word;
-    cpycard.last_review = card->time_reviewed;
+    cpycard.last_review = card->last_review;
+    cpycard.state = card->state;
+    cpycard.rating = card->rating;
+    cpycard.stability = card->stability;
+    
+    strncpy(cpycard.english_word, card->english_word, 31);
+    strncpy(cpycard.spanish_word, card->spanish_word, 31);
 
-    read_write_file("build/flashcards.bin", &fp);
+    int rwf = read_write_file("build/flashcards.bin", &fp);
+
+    if (rwf != 0) {
+        log_debug("Function Error, read_write file return -1");
+    }
 
     int result = fseek(fp, card->index * card_size, SEEK_SET);
 
@@ -71,6 +83,8 @@ int create_flashcard (Flashcard *card) {
 
     long file_size = ftell(fp);
 
+    fclose(fp);
+
     card->index = file_size / sizeof(Flashcard);
 
     int f_result = append_to_file("build/flashcards.bin", &fp);
@@ -82,9 +96,11 @@ int create_flashcard (Flashcard *card) {
     size_t written = fwrite(card, sizeof(Flashcard), 1, fp);
 
     if (written != 1) {
-        printf("fwrite went wrong");
         return -1;
     }
+
+    log_trace("creating flashcard: index=%d en='%s' es='%s' state=%d rating=%d stability=%.4f last_review=%ld",
+          card->index, card->english_word, card->spanish_word, card->state, card->rating, card->stability, (long)card->last_review);
 
     fclose(fp);
     return 0;
@@ -98,11 +114,12 @@ int query_flashcard (int index, Flashcard *card) {
     if (result != 0) {
         return -1;
     }
+
     fseek(fp, index * sizeof(*card), SEEK_SET);
     
     size_t query = fread(card, sizeof(*card), 1, fp);
 
-    if (query != 1) {
+    if (query == 0) {
         return -1;
     }
 

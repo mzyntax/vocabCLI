@@ -1,14 +1,27 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdbool.h>
-#include <time.h>
+#include "../cards.h"
+#include "../logger.h"
 
-void initialize_queue();
+typedef struct {
+    Flashcard *items[100]; // Pointers allow flashcard values to change whilst in Queue
+    int capacity;
+    int front;
+    int rear;
+    bool initialized;
+} Queue;
 
-int enqueue(Flashcard *card, int size);
+void queue_init();
 
-int dequeue(Flashcard *card);
+void initialize_queue(Queue *q);
 
-queue_flashcard(Flashcard *card);
+int check_if_empty(Queue *q);
+
+int check_if_full(Queue *q);
+
+int return_queue_size(Queue *q);
+
+int enqueue(Queue *q, Flashcard *card);
+
+int dequeue(Queue *q, Flashcard *card);

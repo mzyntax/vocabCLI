@@ -2,6 +2,7 @@
 #include <time.h>
 
 typedef enum {
+    NA,
     EASY,
     GOOD,
     HARD,
@@ -16,24 +17,13 @@ typedef enum {
 
 typedef struct {
     int index;
-    TimeCard *last_review;
+    time_t last_review;
     State state;
     Rating rating; // How hard is it for the user?
     float stability; // Time based constant for memory decay
-    time_t due;
-    char *spanish_word;
-    char *english_word;
+    char spanish_word[32];
+    char english_word[32];
 } Flashcard ;
 
-typedef struct {
-    int year;
-    int month;
-    int day;
-    int hour;
-    int minute;
-    int second;
-} TimeCard ;
 
-// R = exp(ln(0.9) * elapsed_days / S)
-
-// S -> stability controls how fast the forgetting curve drops
+void log_review_date(Flashcard *card);

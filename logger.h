@@ -5,6 +5,13 @@
 #include <stdbool.h>
 #include <time.h>
 
+typedef struct {
+    FILE *fp;
+    char *filename;
+    void *udata;
+    int level;
+    int id;
+} Origin;
 
 enum {TRACE, INFO, DEBUG, WARN, ERROR};
 
@@ -12,9 +19,9 @@ enum {TRACE, INFO, DEBUG, WARN, ERROR};
 #define log_info(...) log_to_file (INFO, __FILE__, __LINE__, __VA_ARGS__)
 #define log_debug(...) log_to_file (DEBUG, __FILE__, __LINE__, __VA_ARGS__)
 #define log_warn(...) log_to_file (WARN, __FILE__, __LINE__, __VA_ARGS__)
-#define log_error(...) log_to_file (ERROR, __FILE__, __LINE__, __VA_ARGS___)
+#define log_error(...) log_to_file (ERROR, __FILE__, __LINE__, __VA_ARGS__)
 
-void set_log_file(char *filename);
+int set_log_file(char *filename);
 
-int log_to_file(int level, const char *file, int line, char *msg, ...);
+int log_to_file(int level, const char *file, int line, const char *msg, ...);
 
