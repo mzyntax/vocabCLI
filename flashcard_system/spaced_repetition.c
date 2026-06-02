@@ -50,7 +50,7 @@ bool check_retention(Flashcard *card, float stability) {
     int elapsed_days = unix_now / 86400 - card->last_review / 86400;
     
     float R = exp(log(TARGET_RETENTION) * elapsed_days / stability);
-
+    
     if (stability == -2) {
         return false;
     } else if (R < TARGET_RETENTION) {

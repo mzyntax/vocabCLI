@@ -24,7 +24,7 @@ void create_priority_queue();
 
 void create_waitlist_queue();
 
-int process_flashcards(Flashcard *card);
+int process_flashcards();
 
 int fsrs_based_queue(Flashcard *card);
 

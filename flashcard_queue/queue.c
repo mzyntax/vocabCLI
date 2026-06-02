@@ -38,7 +38,6 @@ int check_if_full(Queue *q) { //
 int return_queue_size(Queue *q) {
     int cards_inserted;
     cards_inserted = 100 - q->capacity;
-    log_info("Current cards inserted: %d", cards_inserted);
     return cards_inserted;
 }
 
@@ -65,6 +64,23 @@ int dequeue(Queue *q, Flashcard *card) {
 
     int front = q->front % 100;
     q->front++;
+    q->capacity++; // capacity needs to increase if an item goes away
     *card = *q->items[front];
     return 0;
+}
+
+void print_queue(Queue *q) {
+    int empty = check_if_empty(q);
+    if (empty == -1){
+        log_info("Could not print => empty queue");
+    }
+    printf("\nCurrent Queue: ");
+
+    for (int i = q->front; i < q->rear; i++) {
+        Flashcard *card = q->items[i % 100];
+        printf("%s", card->english_word);
+    }
+
+    printf("\n");
+
 }

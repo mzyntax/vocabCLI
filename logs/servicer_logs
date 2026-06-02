@@ -1,17 +1,2 @@
-servicer.c | 44 | INFO |Created Priority Queue
-servicer.c | 53 | INFO |Created Waitlist Queue
-servicer.c | 73 | INFO |================  REVIEW SESSION START  ================
-servicer.c | 74 | INFO |Processing 2 flashcard(s)
-servicer.c | 75 | INFO |========================================================
-servicer.c | 88 | INFO |Queuing card #0 | EN: o => ES: o |
-servicer.c | 114 | INFO | 
-servicer.c | 115 | INFO |+-------------------------------------------------------------
-servicer.c | 116 | INFO ||  CARD #0  |  "o"  ->  "o"
-servicer.c | 118 | INFO ||  State:  LEARNING      |  Rating:  GOOD
-servicer.c | 120 | INFO |+-------------------------------------------------------------
-servicer.c | 126 | INFO ||  Stability: 1 day(s)
-|  Last Review: 0 day(s)
-servicer.c | 127 | INFO ||  Retention:  R = 1.0000  [threshold: 0.9000]  ^^ ABOVE  ->  retained
-servicer.c | 129 | INFO ||  Decision:   RETAINED
-servicer.c | 132 | INFO |+-------------------------------------------------------------
-servicer.c | 150 | INFO |+-->  COMPLETED QUEUE  [1 card(s) queued]
+servicer.c | 49 | INFO |Created Priority Queue
+servicer.c | 58 | INFO |Created Waitlist Queue

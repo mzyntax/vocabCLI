@@ -25,3 +25,5 @@ int return_queue_size(Queue *q);
 int enqueue(Queue *q, Flashcard *card);
 
 int dequeue(Queue *q, Flashcard *card);
+
+void print_queue(Queue *q);

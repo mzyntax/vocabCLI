@@ -26,6 +26,11 @@ static const char *rating_label(int rating) {
     return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
 }
 
+static Flashcard *new_fcard_pointer() {
+    Flashcard *pcard = malloc(sizeof(Flashcard));
+    return pcard;
+}
+
 void servicer_init () {
     int check = set_log_file("logs/servicer_logs");
     if (check == -1) {
@@ -34,7 +39,7 @@ void servicer_init () {
     create_priority_queue();
     create_waitlist_queue();
 }
-
+ 
 void create_priority_queue() {
     Queue priority;
     initialize_queue(&priority);
@@ -53,9 +58,10 @@ void create_waitlist_queue() {
     log_info("Created Waitlist Queue");
 }
 
-int process_flashcards (Flashcard *card) {
+int process_flashcards () {
     FILE *fp;
-    int card_size = sizeof(*card);
+    Flashcard x;
+    int card_size = sizeof(x);
     int read_result = read_write_file("build/flashcards.bin", &fp);
 
     if (read_result != 0) {
@@ -64,7 +70,7 @@ int process_flashcards (Flashcard *card) {
 
     fseek(fp, 0, SEEK_END);
     long size = ftell(fp);
-    int amount_of_flashcards = size / sizeof(*card);
+    int amount_of_flashcards = size / card_size;
 
     if (amount_of_flashcards < 1) {
         return -1;
@@ -79,7 +85,7 @@ int process_flashcards (Flashcard *card) {
     fseek(fp, i * card_size, SEEK_SET);
 
     for (;i < amount_of_flashcards; i++) {
-
+        Flashcard *card = new_fcard_pointer();
         size_t card_info = fread(card, card_size, 1, fp);
         if (card_info != 1) { 
             return -1; 
@@ -89,9 +95,13 @@ int process_flashcards (Flashcard *card) {
             ,card->index, card->spanish_word, card->english_word);
 
         int queued = fsrs_based_queue(card);
+
+        printf("Queuing card #%d | Card address (make sure its unique) -> %p\n",card->index, (void *)card);
+
         if (queued == -1) {
             log_debug("Function 'fsrs_based_queue' returned %d", queued);
             return -1;
+        }
     }
     fclose(fp);
     return 0;
@@ -101,10 +111,6 @@ int fsrs_based_queue(Flashcard *card) {
     int stability = calculate_stability(card);
     bool retained = check_retention(card, stability);
 
-    time_t unix_now = time(NULL);
-    int elapsed_days = (int)(unix_now / 86400 - card->last_review / 86400);
-    float R = (stability > 0) ? (float)exp(log(0.9) * elapsed_days / stability) : 0.0f;
-
     log_info(" ");
     log_info("+-------------------------------------------------------------");
     log_info("|  CARD #%d  |  \"%s\"  ->  \"%s\"",
@@ -112,48 +118,52 @@ int fsrs_based_queue(Flashcard *card) {
     log_info("|  State:  %-12s  |  Rating:  %s",
              state_label(card->state), rating_label(card->rating));
     log_info("+-------------------------------------------------------------");
-
-    if (stability == -2) {
-        log_info("|  Stability:  new card  (no prior rating)");
-        log_info("|  Decision:   UNREVIEWED  ->  DUE FOR REVIEW");
-    } else {
-        log_info("|  Stability: %d day(s)\n|  Last Review: %d day(s)",stability, elapsed_days);
-        log_info("|  Retention:  R = %.4f  [threshold: 0.9000]  %s",
-                 R, retained ? "^^ ABOVE  ->  retained" : "vv BELOW  ->  due");
-        log_info("|  Decision:   %s", retained ? "RETAINED" : "DUE FOR REVIEW");
-    }
-
-    log_info("+-------------------------------------------------------------");
+    log_info(" ");
 
     int queued;
-
-
     
-    if (!retained) {
+    if (retained == false) {
         queued = enqueue(active_queues.priority, card);
         if (queued == -1) {
-            log_error("|    Priority queue full — card #%d dropped", card->index);
+            log_error("|X--->   Priority queue full — card #%d dropped", card->index);
             return queued;
         }
+        log_info("✔ |CARD INDEX %d : PRIORITY QUEUE|  => [%d card(s) queued]",
+                card->index, return_queue_size(active_queues.priority));
 
-        log_info("+-->  PRIORITY QUEUE  [%d card(s) queued]",
-                 return_queue_size(active_queues.priority));
-        return 1;
+        return 0;
 
-    } else {
+    } else if (retained == true) {
         queued = enqueue(active_queues.completed, card);
-
         if (queued == -1) {
-            log_error("|    Completed queue full — card #%d dropped", card->index);
+            log_error("|X--->   Completed queue full — card #%d dropped", card->index);
             return -1;
         }
-
-        log_info("+-->  COMPLETED QUEUE  [%d card(s) queued]", return_queue_size(active_queues.completed));
-        return 1;
+        log_info("✔ |CARD INDEX %d : COMPLETED QUEUE| => [%d card(s) queued]",
+                card->index, return_queue_size(active_queues.completed));
+        
+        return 0;
     }
 
     return -1;
 }
+
+int pull_from_queue(QueueType queue, Flashcard *card) {
+    int dq;
+    switch (queue) {
+    case PRIORITY_QUEUE:
+        dq = dequeue(active_queues.priority, card);
+        break;
+    case COMPLETED_QUEUE:
+        dq = dequeue(active_queues.completed, card);
+        break;
+    }
+
+    if (dq != 0) {  
+        return -1; 
+    }
+    return 0;
+    }
 
 int get_queue_capacity(QueueType queue) {
     int capacity;
@@ -168,24 +178,6 @@ int get_queue_capacity(QueueType queue) {
     return capacity;
 }
 
-
-int pull_from_queue(QueueType queue, Flashcard *card) {
-    int dq;
-    switch (queue) {
-    case PRIORITY_QUEUE:
-        dq = dequeue(active_queues.priority, card);
-        break;
-    case COMPLETED_QUEUE:
-        dq = dequeue(active_queues.completed, card);
-        break;
-    }
-
-    if (dq != 0) {  
-        return dq; 
-    }
-    return 0;
-    }
-
 void log_reviewed_card(Flashcard *card, int rating) {
     log_review_date(card);
 
@@ -196,6 +188,7 @@ void log_reviewed_card(Flashcard *card, int rating) {
         return;
     }
     log_info("Reviewed and logged Flashcard | Index: %d | English Word: %s |", card->index, card->english_word);
+    printf("Freeing with address %p\n", (void *)&card);
 }
 
 int edit_flashcard_attribute(Flashcard *card, int choice, char *edit) {

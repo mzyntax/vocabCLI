@@ -11,39 +11,43 @@ void cli_init() {
     set_log_file("logs/cli_logs");
 }
 
-void check_failure_response(int response, char *original_func) {
+static void check_failure_response(int response, char *original_func) {
     if (response != 0) {
         printf("\nFunction Error | %s\n", original_func);
     }
 }
 
-void to_lower(char *word) {
+static void to_lower(char *word) {
     for (int i = 0; word[i]; i++) {
         word[i] = tolower(word[i]);
     }
 }
 
-void to_upper(char *word) {
+static void to_upper(char *word) {
     for (int i = 0; word[i]; i++) {
         word[i] = toupper(word[i]);
     }
 }
 
-void display_all_flashcards () {
+static void display_all_flashcards () {
     Flashcard card;
     int amount = 0;
     int result = 0;
     int *presult = &result;
+    bool cards_found = false;
 
     while (result == 0) {
         *presult = query_flashcard(amount, &card);
+        cards_found = true;
         if (*presult == -1) {
-            printf("No flashcards found !\n");
             break;
         }
-        printf("Index: %d | ES: %s | EN: %s\n",
+        printf("    ||| Index: %d | ES: %s => EN: %s\n",
             card.index, card.spanish_word, card.english_word);
         amount ++;
+    }
+    if (cards_found == false) {
+        printf("No flashcards found!");
     }
 }
 
@@ -98,10 +102,10 @@ void edit_flashcard_options() {
     }
 }
 
-int user_rating () {
+void gather_review_data(Flashcard *card) {
     int user_diff;
-    printf("Rate flashcard difficulty\n");
-    printf("( 1 -> Easy | 2 -> Medium | 3 -> Hard | 4 -> Very Hard )\n=> ");
+    printf("\nRate flashcard difficulty:\n");
+    printf("||(1) Easy\n||(2) Medium\n||(3) Hard\n||(4) Very Hard\n=> ");
     scanf("%d", &user_diff);
     if (user_diff > 4) {
         printf("(Input is greater than 4 -> submitting as 4)");
@@ -110,72 +114,76 @@ int user_rating () {
         printf("(Input is less than 1 -> submitting as 1)");
         user_diff = 1;
     }
-    return user_diff;
-}
-
-void gather_review_data(Flashcard *card) {
-    int user_diff = user_rating();
     log_reviewed_card(card, user_diff);
 }
 
 void quiz_user(Flashcard *card) {
-        printf("\n| Beginning Review ! | Enter 'Quit' (Q) to exit |\n");
-        printf("| Enter translation for: %s | => ", card->spanish_word);
+    printf("| Enter translation for %s | => ", card->spanish_word);
 
-        char user_response[25];
-        scanf("%s", user_response);
-        to_lower(user_response);
+    char user_response[25];
+    scanf("%s", user_response);
+    to_lower(user_response);
 
-        if (strcmp(user_response, "q") == 0 || strcmp(user_response, "quit") == 0) {
-            printf("\nExiting Quiz..\n");
-            return;
-        }
+    if (strcmp(user_response, "q") == 0 || strcmp(user_response, "quit") == 0) {
+        printf("\nExiting Quiz..\n");
+        return;
+    }
 
-        ScoreOutcome outcome = score_english_translation(card, user_response);
-  
-        switch (outcome) {
-        case CORRECT_GUESS:
-            printf("You guessed correctly !\n");
-            gather_review_data(card);
-            break;
-        case INCORRECT_GUESS:
-            printf("You guessed incorrectly..\n");
-            gather_review_data(card);
-            break;
-        case INTERNAL_ERROR:
-            printf("Internal error in function\n");
-            break;
-        }
+    ScoreOutcome outcome = score_english_translation(card, user_response);
+
+    switch (outcome) {
+    case CORRECT_GUESS:
+        printf("        >>You guessed correctly<<\n");
+        gather_review_data(card);
+        break;
+    case INCORRECT_GUESS:
+        printf("        >>You guessed incorrectly<<\n");
+        gather_review_data(card);
+        break;
+    case INTERNAL_ERROR:
+        printf("Internal error in function\n");
+        break;
+    }
 }
 
 void review_flashcards () {
     Flashcard card;
     QueueType priority = PRIORITY_QUEUE;
     QueueType completed = COMPLETED_QUEUE;
+    int capacity;
 
     printf("Checking for flashcards due for review..\n");
 
-    int p = process_flashcards(&card);
+    int p = process_flashcards();
 
-    int capacity = get_queue_capacity(priority);
+    if (p == -1) {
+        printf("No flashcards created yet!\n");
+        return;
+    }
+
+    capacity = get_queue_capacity(priority);
     if (capacity != 0) {
         printf("Found flashcards due for review today! Beggining Quiz now...\n");
         for (int i = 0; i < capacity; i++) {
-            pull_from_queue(priority, &card);
+            int check = pull_from_queue(priority, &card);
+            if (check == -1) {
+                log_info("Couldnt pull card from queue");
+                return;
+            }
             quiz_user(&card);
         }
-        break;
+        return;
     }
     
-    int capacity = get_queue_capacity(completed);
+    capacity = get_queue_capacity(completed);
     if (capacity != 0) {
         printf("No flashcards due for review today! Cards Completed:\n");
         for (int i = 0; i < capacity; i++) {
             pull_from_queue(completed, &card);
-            printf("+-- Index %d | EN: %s => ES: %s | --+\n",
+            printf("||CARD #%d|| EN: %s => ES: %s\n",
             card.index, card.english_word, card.spanish_word);
-        }
-        break;
+            }
+        return;
     }
 }
 
@@ -192,11 +200,11 @@ int main () {
     char user_choice[20];
 
     while (true) {
-        printf("Review Flashcards (F) | Create Flashcard (C) | Edit Flashcard (E) | Show My Flashcards (S) | Quit (Q)\n=> ");
-        scanf("%s", user_choice); 
+        printf("\n|| Review Flashcards (F) | Create Flashcard (C) | Edit Flashcard (E) | Show My Flashcards (S) | Quit (Q) |\n|| ==> ");
+        scanf("%s", user_choice);
+        printf("\n");
     
         to_upper(user_choice);
-        
         if (strcmp(user_choice, "F") == 0) {
             review_flashcards();
         } else if (strcmp(user_choice, "C") == 0) {
