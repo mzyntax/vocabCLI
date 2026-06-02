@@ -16,6 +16,16 @@ static struct {
     Queue *completed;
 } active_queues;
 
+static const char *state_label(int state) {
+    static const char *names[] = {"LEARNING", "REVIEW", "RELEARNING"};
+    return (state >= 0 && state <= 2) ? names[state] : "UNKNOWN";
+}
+
+static const char *rating_label(int rating) {
+    static const char *names[] = {"NA", "EASY", "GOOD", "HARD", "AGAIN"};
+    return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
+}
+
 void servicer_init () {
     int check = set_log_file("logs/servicer_logs");
     if (check == -1) {
@@ -74,29 +84,17 @@ int process_flashcards (Flashcard *card) {
         if (card_info != 1) { 
             return -1; 
         }
+
+        log_info("Queuing card #%d | EN: %s => ES: %s |"
+            ,card->index, card->spanish_word, card->english_word);
+
         int queued = fsrs_based_queue(card);
-        if (queued == 0) {
-            return 0;
-        } else if (queued == 1) {
-            return 1;
-        }
-        else {
+        if (queued == -1) {
             log_debug("Function 'fsrs_based_queue' returned %d", queued);
-        }
-        
+            return -1;
     }
     fclose(fp);
     return 0;
-}
-
-static const char *state_label(int state) {
-    static const char *names[] = {"LEARNING", "REVIEW", "RELEARNING"};
-    return (state >= 0 && state <= 2) ? names[state] : "UNKNOWN";
-}
-
-static const char *rating_label(int rating) {
-    static const char *names[] = {"NA", "EASY", "GOOD", "HARD", "AGAIN"};
-    return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
 }
 
 int fsrs_based_queue(Flashcard *card) {
@@ -119,8 +117,7 @@ int fsrs_based_queue(Flashcard *card) {
         log_info("|  Stability:  new card  (no prior rating)");
         log_info("|  Decision:   UNREVIEWED  ->  DUE FOR REVIEW");
     } else {
-        log_info("|  Stability:  %d day(s)", stability);
-        log_info("|  Elapsed:    %d day(s) since last review", elapsed_days);
+        log_info("|  Stability: %d day(s)\n|  Last Review: %d day(s)",stability, elapsed_days);
         log_info("|  Retention:  R = %.4f  [threshold: 0.9000]  %s",
                  R, retained ? "^^ ABOVE  ->  retained" : "vv BELOW  ->  due");
         log_info("|  Decision:   %s", retained ? "RETAINED" : "DUE FOR REVIEW");
@@ -129,25 +126,29 @@ int fsrs_based_queue(Flashcard *card) {
     log_info("+-------------------------------------------------------------");
 
     int queued;
+
+
+    
     if (!retained) {
         queued = enqueue(active_queues.priority, card);
         if (queued == -1) {
-            log_error("|  [ERROR] Priority queue full — card #%d dropped", card->index);
-            log_info("+-->  [ERROR] Priority queue is full");
+            log_error("|    Priority queue full — card #%d dropped", card->index);
             return queued;
         }
+
         log_info("+-->  PRIORITY QUEUE  [%d card(s) queued]",
                  return_queue_size(active_queues.priority));
-        return 0;
+        return 1;
+
     } else {
         queued = enqueue(active_queues.completed, card);
+
         if (queued == -1) {
-            log_error("|  [ERROR] Completed queue full — card #%d dropped", card->index);
-            log_info("+-->  [ERROR] Completed queue is full");
-            return queued;
+            log_error("|    Completed queue full — card #%d dropped", card->index);
+            return -1;
         }
-        log_info("+-->  COMPLETED QUEUE  [%d card(s) queued]",
-                 return_queue_size(active_queues.completed));
+
+        log_info("+-->  COMPLETED QUEUE  [%d card(s) queued]", return_queue_size(active_queues.completed));
         return 1;
     }
 
@@ -182,8 +183,6 @@ int pull_from_queue(QueueType queue, Flashcard *card) {
     if (dq != 0) {  
         return dq; 
     }
-
-    log_info("Pulled Flashcard | Index %d | English Word %s |", card->index, card->english_word);
     return 0;
     }
 

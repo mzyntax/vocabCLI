@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include "logger.h"
 
 #define max_ids 10
 #define CHECK(x) if (!(x)) {return -1;}
@@ -22,7 +23,7 @@ int set_logger_id() {
     return -1;
 }
 
-int set_log_file(char *filename, char *origin_file) {
+int mark_file(const char *file, const char *output, ...) {
     Origin *logger = malloc(sizeof(Origin));
     CHECK(logger);
 
@@ -35,22 +36,23 @@ int set_log_file(char *filename, char *origin_file) {
 
     logger->id = id;
     
-    FILE *fptr = fopen(filename, "w+");
+    FILE *fptr = fopen(output, "w+");
+
     if (fptr != NULL) {
         logger->fp = fptr;
     } else {
-        fprintf(stderr, "logger: failed to open '%s'\n", filename);
+        fprintf(stderr, "logger: failed to open '%s'\n", output);
         free(logger);
         return -1;
     }
 
-    logger->filename = origin_file;
+    strcpy(logger->filename, file);
 
     cb_info.loggers[id] = logger;
     return 0;
 }
 
-int log_to_file(int level, const char *file, int line, char *msg, ...){
+int log_to_file(int level, const char *file, int line, const char *msg, ...){
     va_list ap;
     FILE *fp = NULL;
 

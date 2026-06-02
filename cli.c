@@ -156,24 +156,26 @@ void review_flashcards () {
     printf("Checking for flashcards due for review..\n");
 
     int p = process_flashcards(&card);
-    
-    if (p == 0) {
-        int capacity = get_queue_capacity(priority);
+
+    int capacity = get_queue_capacity(priority);
+    if (capacity != 0) {
+        printf("Found flashcards due for review today! Beggining Quiz now...\n");
         for (int i = 0; i < capacity; i++) {
-            printf("Capacity => %d\n", i);
-            printf("I => %d\n", i);
             pull_from_queue(priority, &card);
             quiz_user(&card);
-            log_trace("Quized user on Flashcard Index %d", card.index);
-            }
-    } else if (p == 1) {
-        int capacity = get_queue_capacity(completed);
+        }
+        break;
+    }
+    
+    int capacity = get_queue_capacity(completed);
+    if (capacity != 0) {
+        printf("No flashcards due for review today! Cards Completed:\n");
         for (int i = 0; i < capacity; i++) {
             pull_from_queue(completed, &card);
+            printf("+-- Index %d | EN: %s => ES: %s | --+\n",
+            card.index, card.english_word, card.spanish_word);
         }
-    } else {
-        printf("No flashcards found!\n");
-        return;
+        break;
     }
 }
 
