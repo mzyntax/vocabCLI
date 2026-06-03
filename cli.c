@@ -12,7 +12,7 @@ void cli_init() {
 }
 
 static void check_failure_response(int response, char *original_func) {
-    if (response != 0) {
+    if (response == -1) {
         printf("\nFunction Error | %s\n", original_func);
     }
 }
@@ -147,27 +147,32 @@ void quiz_user(Flashcard *card) {
 }
 
 void review_flashcards () {
-    Flashcard card;
     QueueType priority = PRIORITY_QUEUE;
     QueueType completed = COMPLETED_QUEUE;
+    Flashcard card;
     int capacity;
 
     printf("Checking for flashcards due for review..\n");
 
-    int p = process_flashcards();
+    int total_cards = return_flashcard_amount();
+    check_failure_response(total_cards, "return_flashcard_amount");
 
-    if (p == -1) {
-        printf("No flashcards created yet!\n");
-        return;
+    for (int i = 0; i < total_cards; i++) {
+        printf("Current Iteration %d\n", i);
+        int p = process_flashcard(&card, i);
+        if (p == -1) {
+            printf("No flashcards created yet!\n");
+            return;
+        }
     }
 
     capacity = get_queue_capacity(priority);
     if (capacity != 0) {
         printf("Found flashcards due for review today! Beggining Quiz now...\n");
         for (int i = 0; i < capacity; i++) {
-            int check = pull_from_queue(priority, &card);
-            if (check == -1) {
-                log_info("Couldnt pull card from queue");
+            Flashcard card = pull_from_queue(priority);
+            if (card.index == -1) {
+                log_debug("Card has sentinal");
                 return;
             }
             quiz_user(&card);
@@ -179,7 +184,7 @@ void review_flashcards () {
     if (capacity != 0) {
         printf("No flashcards due for review today! Cards Completed:\n");
         for (int i = 0; i < capacity; i++) {
-            pull_from_queue(completed, &card);
+            Flashcard card = pull_from_queue(completed);
             printf("||CARD #%d|| EN: %s => ES: %s\n",
             card.index, card.english_word, card.spanish_word);
             }

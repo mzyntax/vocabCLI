@@ -39,6 +39,6 @@ ftest: tests/formula_test.c
 	mkdir -p build
 	gcc $(CFLAGS) tests/formula_test.c -o build/ftest -lm
 
-tester: tests/tester.c servicer.c storagelib.c
+tester: tests/tester.c
 	mkdir -p build
-	gcc $(CFLAGS) tests/tester.c servicer.c storagelib.c logger.c flashcard_queue/queue.c flashcard_system/spaced_repetition.c -o build/tester -lm
+	gcc $(CFLAGS) tests/tester.c -o build/tester -lm

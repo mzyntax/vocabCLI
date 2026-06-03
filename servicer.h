@@ -24,13 +24,15 @@ void create_priority_queue();
 
 void create_waitlist_queue();
 
-int process_flashcards();
+int return_flashcard_amount ();
+
+int process_flashcard(Flashcard *card, int card_index);
 
 int fsrs_based_queue(Flashcard *card);
 
 int get_queue_capacity(QueueType queue);
 
-int pull_from_queue(QueueType queue, Flashcard *card);
+Flashcard pull_from_queue(QueueType queue);
 
 void log_reviewed_card(Flashcard *card, int difficulty);
 

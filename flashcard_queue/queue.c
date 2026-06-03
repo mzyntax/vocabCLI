@@ -51,22 +51,24 @@ int enqueue(Queue *q, Flashcard *card) {
     int rear = q->rear % 100;
     q->rear++;
     q->capacity--;
-    q->items[rear] = card;
+    q->items[rear] = *card;
     return 0;
 }
 
-int dequeue(Queue *q, Flashcard *card) {
+Flashcard dequeue(Queue *q) {
     int e = check_if_empty(q);
+    Flashcard card;
 
     if (e == -1) {
-        return e;
+        card.index = -1;
+        log_info("Queue was empty, set sentinal");
     }
 
     int front = q->front % 100;
     q->front++;
     q->capacity++; // capacity needs to increase if an item goes away
-    *card = *q->items[front];
-    return 0;
+    card = q->items[front];
+    return card;
 }
 
 void print_queue(Queue *q) {
@@ -77,8 +79,8 @@ void print_queue(Queue *q) {
     printf("\nCurrent Queue: ");
 
     for (int i = q->front; i < q->rear; i++) {
-        Flashcard *card = q->items[i % 100];
-        printf("%s", card->english_word);
+        Flashcard card = q->items[i % 100];
+        printf("%s", card.english_word);
     }
 
     printf("\n");

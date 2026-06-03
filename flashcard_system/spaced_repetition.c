@@ -4,7 +4,6 @@
 #include <time.h>
 #include <math.h>
 #include "../cards.h"
-#include "../cards.c"
 #include "../storagelib.h"
 #include "../servicer.h"
 #include "../flashcard_queue/queue.h"
@@ -24,6 +23,7 @@ int calculate_stability(Flashcard *card) {
         case REVIEW:
             multiplier = 1.6;
             break;
+    }
     switch (card->rating) {
         case NA:
             return -2;
@@ -40,7 +40,6 @@ int calculate_stability(Flashcard *card) {
             S = 0.5 * multiplier;
             return S;
         }
-    }
     return -1;
 }
 
@@ -58,5 +57,4 @@ bool check_retention(Flashcard *card, float stability) {
     } else {
         return true;
     }
-    return -1;
 }

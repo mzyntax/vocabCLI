@@ -29,7 +29,7 @@ int mark_file(const char *file, const char *output, ...) {
 
     int id = set_logger_id();
 
-    if (id == 1) {
+    if (id == -1) {
         free(logger);
         return -1;
     }

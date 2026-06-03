@@ -11,6 +11,8 @@
 #include "flashcard_system/spaced_repetition.h"
 #include "flashcard_queue/queue.h"
 
+#define CHECK(x) if (x == -1) {return -1;}
+
 static struct {
     Queue *priority;
     Queue *completed;
@@ -24,11 +26,6 @@ static const char *state_label(int state) {
 static const char *rating_label(int rating) {
     static const char *names[] = {"NA", "EASY", "GOOD", "HARD", "AGAIN"};
     return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
-}
-
-static Flashcard *new_fcard_pointer() {
-    Flashcard *pcard = malloc(sizeof(Flashcard));
-    return pcard;
 }
 
 void servicer_init () {
@@ -58,112 +55,95 @@ void create_waitlist_queue() {
     log_info("Created Waitlist Queue");
 }
 
-int process_flashcards () {
+int return_flashcard_amount () {
     FILE *fp;
-    Flashcard x;
-    int card_size = sizeof(x);
+    Flashcard card;
+    int c_size = sizeof(card);
     int read_result = read_write_file("build/flashcards.bin", &fp);
-
-    if (read_result != 0) {
-        return -1;
-    }
+    CHECK(read_result);
 
     fseek(fp, 0, SEEK_END);
     long size = ftell(fp);
-    int amount_of_flashcards = size / card_size;
 
+    int amount_of_flashcards = size / c_size;
     if (amount_of_flashcards < 1) {
+        log_trace("Unexpected amount of flashcards");
+        return -1;
+    }
+    return amount_of_flashcards;
+}
+
+int process_flashcard(Flashcard *card, int card_index) {
+    FILE *fp;
+    int c_size = sizeof(*card);
+
+    int read_result = read_write_file("build/flashcards.bin", &fp);
+    CHECK(read_result);
+
+    fseek(fp, card_index * c_size, SEEK_SET);
+    size_t card_info = fread(card, c_size, 1, fp);
+    if (card_info != 1) {
         return -1;
     }
 
-    log_info("================  REVIEW SESSION START  ================");
-    log_info("Processing %d flashcard(s)", amount_of_flashcards);
-    log_info("========================================================");
+    log_info("|===     ↓  PROCESSING ↓    ===|");
 
-    int i = 0;
+    int queued = fsrs_based_queue(card);
 
-    fseek(fp, i * card_size, SEEK_SET);
-
-    for (;i < amount_of_flashcards; i++) {
-        Flashcard *card = new_fcard_pointer();
-        size_t card_info = fread(card, card_size, 1, fp);
-        if (card_info != 1) { 
-            return -1; 
-        }
-
-        log_info("Queuing card #%d | EN: %s => ES: %s |"
-            ,card->index, card->spanish_word, card->english_word);
-
-        int queued = fsrs_based_queue(card);
-
-        printf("Queuing card #%d | Card address (make sure its unique) -> %p\n",card->index, (void *)card);
-
-        if (queued == -1) {
-            log_debug("Function 'fsrs_based_queue' returned %d", queued);
-            return -1;
-        }
-    }
+    printf("Queuing card #%d | Address -> %p\n", card->index, (void *)card);
+    CHECK(queued);
     fclose(fp);
     return 0;
-}
+    }
 
 int fsrs_based_queue(Flashcard *card) {
     int stability = calculate_stability(card);
     bool retained = check_retention(card, stability);
-
-    log_info(" ");
-    log_info("+-------------------------------------------------------------");
-    log_info("|  CARD #%d  |  \"%s\"  ->  \"%s\"",
-             card->index, card->spanish_word, card->english_word);
-    log_info("|  State:  %-12s  |  Rating:  %s",
-             state_label(card->state), rating_label(card->rating));
-    log_info("+-------------------------------------------------------------");
-    log_info(" ");
-
-    int queued;
+    log_info("| Index #%d | EN: %s | State:  %-12s | Rating:  %s",
+    card->index, card->english_word, state_label(card->state), rating_label(card->rating));
     
     if (retained == false) {
-        queued = enqueue(active_queues.priority, card);
+        int queued = enqueue(active_queues.priority, card);
         if (queued == -1) {
-            log_error("|X--->   Priority queue full — card #%d dropped", card->index);
+            log_error("|===     Priority queue full — card #%d dropped", card->index);
             return queued;
         }
-        log_info("✔ |CARD INDEX %d : PRIORITY QUEUE|  => [%d card(s) queued]",
+        log_info("|CARD INDEX %d : PRIORITY QUEUE|  => [%d card(s) queued]",
                 card->index, return_queue_size(active_queues.priority));
+        log_info("\n");
 
         return 0;
 
     } else if (retained == true) {
-        queued = enqueue(active_queues.completed, card);
+        int queued = enqueue(active_queues.completed, card);
         if (queued == -1) {
-            log_error("|X--->   Completed queue full — card #%d dropped", card->index);
+            log_error("|===     Completed queue full — card #%d dropped", card->index);
             return -1;
         }
-        log_info("✔ |CARD INDEX %d : COMPLETED QUEUE| => [%d card(s) queued]",
+        log_info("|CARD INDEX %d : COMPLETED QUEUE| => [%d card(s) queued]",
                 card->index, return_queue_size(active_queues.completed));
-        
+        log_info("|===        ✔ DONE ✔       ===|");
+        log_info("");
         return 0;
     }
 
     return -1;
 }
 
-int pull_from_queue(QueueType queue, Flashcard *card) {
-    int dq;
+Flashcard pull_from_queue(QueueType queue) {
+    Flashcard card;
     switch (queue) {
     case PRIORITY_QUEUE:
-        dq = dequeue(active_queues.priority, card);
+        card = dequeue(active_queues.priority);
+        log_info("Dequeued priority card");
         break;
     case COMPLETED_QUEUE:
-        dq = dequeue(active_queues.completed, card);
+        card = dequeue(active_queues.completed);
+        log_info("Dequeued completed card");
         break;
     }
-
-    if (dq != 0) {  
-        return -1; 
-    }
-    return 0;
-    }
+    return card;
+}
 
 int get_queue_capacity(QueueType queue) {
     int capacity;
