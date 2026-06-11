@@ -5,7 +5,7 @@
 #include "../logger.h"
 
 typedef struct {
-    Flashcard items[100];
+    Flashcard *items[100];
     int capacity;
     int front;
     int rear;
@@ -24,6 +24,6 @@ int return_queue_size(Queue *q);
 
 int enqueue(Queue *q, Flashcard *card);
 
-Flashcard dequeue(Queue *q);
+int dequeue(Queue *q, Flashcard *card);
 
 void print_queue(Queue *q);

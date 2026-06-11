@@ -3,6 +3,12 @@
 #include <stdbool.h>
 #include "../cards.h"
 
+void sr_init();
+
 float calculate_stability(Flashcard *card);
 
-bool check_retention(Flashcard *card, float stability);
+void calculate_learning_state(Flashcard *card);
+
+bool calculate_retention(Flashcard *card);
+
+int calculate_next_review(Flashcard *card);

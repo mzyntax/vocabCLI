@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 #include "cards.h"
 #include "servicer.h"
 #include "storagelib.h"
@@ -38,14 +39,15 @@ static void display_all_flashcards () {
 
     while (result == 0) {
         *presult = query_flashcard(amount, &card);
-        cards_found = true;
         if (*presult == -1) {
             break;
         }
+        cards_found = true;
         printf("    ||| Index: %d | ES: %s => EN: %s\n",
             card.index, card.spanish_word, card.english_word);
         amount ++;
     }
+
     if (cards_found == false) {
         printf("No flashcards found!");
     }
@@ -71,7 +73,6 @@ void edit_flashcard_options() {
     int index, user_edit_choice;
     char word_edit[30];
     Flashcard card;
-
     printf("\nEnter Flashcard index: ");
     scanf("%d", &index);
 
@@ -128,8 +129,10 @@ void quiz_user(Flashcard *card) {
         printf("\nExiting Quiz..\n");
         return;
     }
-
-    ScoreOutcome outcome = score_english_translation(card, user_response);
+    
+    log_trace("|    Before Scoring => Correct: %d | Incorrect: %d", card->correct_tally, card->incorrect_tally);
+    ScoreOutcome outcome = score_attempt(card, user_response);
+    log_trace("|    After Scoring => Correct: %d | Incorrect: %d", card->correct_tally, card->incorrect_tally);
 
     switch (outcome) {
     case CORRECT_GUESS:
@@ -155,13 +158,15 @@ void review_flashcards () {
     printf("Checking for flashcards due for review..\n");
 
     int total_cards = return_flashcard_amount();
-    check_failure_response(total_cards, "return_flashcard_amount");
+    if (total_cards == -1) {
+        printf("No flashcards created yet!\n");
+        return;
+    }
 
     for (int i = 0; i < total_cards; i++) {
-        printf("Current Iteration %d\n", i);
-        int p = process_flashcard(&card, i);
-        if (p == -1) {
-            printf("No flashcards created yet!\n");
+        Flashcard *c = create_card_skeleton();
+        int status = process_flashcard(c, i);
+        if (status == -1) {
             return;
         }
     }
@@ -170,23 +175,24 @@ void review_flashcards () {
     if (capacity != 0) {
         printf("Found flashcards due for review today! Beggining Quiz now...\n");
         for (int i = 0; i < capacity; i++) {
-            Flashcard card = pull_from_queue(priority);
-            if (card.index == -1) {
-                log_debug("Card has sentinal");
+            int status = pull_from_queue(priority, &card);
+            if (status == -1) {
+                log_debug("Pull from queue failed");
                 return;
             }
             quiz_user(&card);
-        }
-        return;
-    }
-    
-    capacity = get_queue_capacity(completed);
-    if (capacity != 0) {
+        } return; 
+    } else {
+        capacity = get_queue_capacity(completed);
         printf("No flashcards due for review today! Cards Completed:\n");
         for (int i = 0; i < capacity; i++) {
-            Flashcard card = pull_from_queue(completed);
-            printf("||CARD #%d|| EN: %s => ES: %s\n",
-            card.index, card.english_word, card.spanish_word);
+            int status = pull_from_queue(completed, &card);
+            if (status == -1) {
+                log_debug("Pull from queue failed");
+                return;
+            }
+            printf("||CARD #%d|| EN: %s => ES: %s | Day(s) until next review: %d\n",
+            card.index, card.english_word, card.spanish_word, card.next_review);
             }
         return;
     }
@@ -194,7 +200,6 @@ void review_flashcards () {
 
 void initialize_functions() {
     cli_init();
-    queue_init();
     servicer_init();
     storagelib_init();
 }
@@ -212,6 +217,7 @@ int main () {
         to_upper(user_choice);
         if (strcmp(user_choice, "F") == 0) {
             review_flashcards();
+            free_heap_cards();
         } else if (strcmp(user_choice, "C") == 0) {
             new_flashcard();
         } else if (strcmp(user_choice, "E") == 0) {

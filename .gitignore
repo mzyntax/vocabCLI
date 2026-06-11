@@ -2,3 +2,5 @@ build
 log.c
 *claude
 *tests
+*logs
+Makefile

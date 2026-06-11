@@ -16,6 +16,16 @@ static const char *level_arr[] = {
     "TRACE", "INFO", "DEBUG", "WARNING", "ERROR"
 };
 
+const char *state_label(int state) {
+    const char *names[] = {"LEARNING", "REVIEW", "RELEARNING"};
+    return (state >= 0 && state <= 2) ? names[state] : "UNKNOWN";
+}
+
+const char *rating_label(int rating) {
+    const char *names[] = {"NA", "EASY", "GOOD", "HARD", "AGAIN"};
+    return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
+}
+
 int set_logger_id() {
     if (cb_info.possible_ids < max_ids) {
         return cb_info.possible_ids++;

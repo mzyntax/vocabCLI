@@ -17,13 +17,21 @@ typedef enum {
 
 typedef struct {
     int index;
-    time_t last_review;
     State state;
-    Rating rating; // How hard is it for the user?
-    float stability; // Time based constant for memory decay
+    Rating rating;
+    float retention;
+    float stability;
+    time_t last_review;
+    int next_review;
+    int correct_tally;
+    int incorrect_tally;
     char spanish_word[32];
     char english_word[32];
 } Flashcard ;
 
 
-void log_review_date(Flashcard *card);
+void card_init ();
+
+void free_heap_cards();
+
+Flashcard *create_card_skeleton ();

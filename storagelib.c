@@ -99,8 +99,8 @@ int create_flashcard (Flashcard *card) {
         return -1;
     }
 
-    log_trace("creating flashcard: index=%d en='%s' es='%s' state=%d rating=%d stability=%.4f last_review=%ld",
-          card->index, card->english_word, card->spanish_word, card->state, card->rating, card->stability, (long)card->last_review);
+    log_trace("Creating New Flashcard: Index=%d | Front='%s' | Back='%s'",
+                card->index, card->english_word, card->spanish_word);
 
     fclose(fp);
     return 0;
@@ -112,6 +112,7 @@ int query_flashcard (int index, Flashcard *card) {
     int result = read_write_file("build/flashcards.bin", &fp);
     
     if (result != 0) {
+        log_trace("Error occured in read_write_file");
         return -1;
     }
 
@@ -120,6 +121,7 @@ int query_flashcard (int index, Flashcard *card) {
     size_t query = fread(card, sizeof(*card), 1, fp);
 
     if (query == 0) {
+        log_trace("Error occured in fread");
         return -1;
     }
 

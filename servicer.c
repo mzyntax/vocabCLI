@@ -18,21 +18,14 @@ static struct {
     Queue *completed;
 } active_queues;
 
-static const char *state_label(int state) {
-    static const char *names[] = {"LEARNING", "REVIEW", "RELEARNING"};
-    return (state >= 0 && state <= 2) ? names[state] : "UNKNOWN";
-}
-
-static const char *rating_label(int rating) {
-    static const char *names[] = {"NA", "EASY", "GOOD", "HARD", "AGAIN"};
-    return (rating >= 0 && rating <= 4) ? names[rating] : "UNKNOWN";
-}
-
 void servicer_init () {
     int check = set_log_file("logs/servicer_logs");
     if (check == -1) {
         return;
     }
+    sr_init();
+    queue_init();
+    card_init();
     create_priority_queue();
     create_waitlist_queue();
 }
@@ -74,6 +67,15 @@ int return_flashcard_amount () {
 }
 
 int process_flashcard(Flashcard *card, int card_index) {
+    log_trace("|============================================|");
+    log_trace("|               fsrs_based_queue             |");
+    log_trace("|============================================|");
+    log_trace("| ↓  RECEIVED                                |");
+    log_trace("|   Addr: %-14p  Index: %d", (void*)card, card->index);
+    log_trace("|   State: %-10s  Rating: %-6s  Stability: %.2f",
+        state_label(card->state), rating_label(card->rating), card->stability);
+    log_trace("|--------------------------------------------|");
+
     FILE *fp;
     int c_size = sizeof(*card);
 
@@ -90,17 +92,23 @@ int process_flashcard(Flashcard *card, int card_index) {
 
     int queued = fsrs_based_queue(card);
 
-    printf("Queuing card #%d | Address -> %p\n", card->index, (void *)card);
     CHECK(queued);
     fclose(fp);
     return 0;
     }
 
 int fsrs_based_queue(Flashcard *card) {
-    int stability = calculate_stability(card);
-    bool retained = check_retention(card, stability);
-    log_info("| Index #%d | EN: %s | State:  %-12s | Rating:  %s",
-    card->index, card->english_word, state_label(card->state), rating_label(card->rating));
+    calculate_stability(card);
+    bool retained = calculate_retention(card);
+
+    log_trace("|============================================|");
+    log_trace("|               fsrs_based_queue             |");
+    log_trace("|============================================|");
+    log_trace("| ↓  RECEIVED                                |");
+    log_trace("|   Addr: %-14p  Index: %d", (void*)card, card->index);
+    log_trace("|   State: %-10s  Rating: %-6s  Stability: %.2f",
+        state_label(card->state), rating_label(card->rating), card->stability);
+    log_trace("|--------------------------------------------|");
     
     if (retained == false) {
         int queued = enqueue(active_queues.priority, card);
@@ -108,18 +116,18 @@ int fsrs_based_queue(Flashcard *card) {
             log_error("|===     Priority queue full — card #%d dropped", card->index);
             return queued;
         }
+
         log_info("|CARD INDEX %d : PRIORITY QUEUE|  => [%d card(s) queued]",
                 card->index, return_queue_size(active_queues.priority));
         log_info("\n");
-
-        return 0;
-
+        return 0; 
     } else if (retained == true) {
         int queued = enqueue(active_queues.completed, card);
         if (queued == -1) {
             log_error("|===     Completed queue full — card #%d dropped", card->index);
             return -1;
         }
+
         log_info("|CARD INDEX %d : COMPLETED QUEUE| => [%d card(s) queued]",
                 card->index, return_queue_size(active_queues.completed));
         log_info("|===        ✔ DONE ✔       ===|");
@@ -130,19 +138,21 @@ int fsrs_based_queue(Flashcard *card) {
     return -1;
 }
 
-Flashcard pull_from_queue(QueueType queue) {
-    Flashcard card;
+int pull_from_queue(QueueType queue, Flashcard *card) {
+    int status;
     switch (queue) {
     case PRIORITY_QUEUE:
-        card = dequeue(active_queues.priority);
+        status = dequeue(active_queues.priority, card);
+        CHECK(status);
         log_info("Dequeued priority card");
         break;
     case COMPLETED_QUEUE:
-        card = dequeue(active_queues.completed);
+        status = dequeue(active_queues.completed, card);
+        CHECK(status);
         log_info("Dequeued completed card");
         break;
     }
-    return card;
+    return 0;
 }
 
 int get_queue_capacity(QueueType queue) {
@@ -159,16 +169,22 @@ int get_queue_capacity(QueueType queue) {
 }
 
 void log_reviewed_card(Flashcard *card, int rating) {
-    log_review_date(card);
-
+    time_t today = time(NULL);
+    card->last_review = today;
     card->rating = rating;
+    
+    calculate_learning_state(card);
+    calculate_stability(card);
+    bool retained = calculate_retention(card);
+    if (retained == true) {
+        calculate_next_review(card);
+    }
+    
     int update = update_flashcard(card);
     if (update == -1) {
         log_debug("Flashcard could not be updated");
         return;
     }
-    log_info("Reviewed and logged Flashcard | Index: %d | English Word: %s |", card->index, card->english_word);
-    printf("Freeing with address %p\n", (void *)&card);
 }
 
 int edit_flashcard_attribute(Flashcard *card, int choice, char *edit) {
@@ -193,12 +209,16 @@ int submit_flashcard_data(char *en_word, char *es_word) {
     Flashcard card;
     State state = LEARNING;
     Rating rating = NA;
-    Flashcard *pcard = &card;
 
     card.state = state;
     card.rating = rating;
+    card.retention = 0;
     card.stability = 0;
     card.last_review = 0;
+    card.next_review = 0;
+    card.correct_tally = 0;
+    card.incorrect_tally = 0;
+
     
     int en_size = strlen(en_word);
     int es_size = strlen(es_word);
@@ -210,28 +230,37 @@ int submit_flashcard_data(char *en_word, char *es_word) {
         return -1;
     }
 
-    int result = create_flashcard(pcard);
+    int result = create_flashcard(&card);
     if (result != 0) {
         return -1;
     }
     return 0;
 }
 
-ScoreOutcome score_english_translation(Flashcard *card, char *en_guess) {
+ScoreOutcome score_attempt(Flashcard *card, char *en_guess) {
     char *english_word = card->english_word;
 
+    log_trace("|============================================|");
+    log_trace("|                score_attempt               |");
+    log_trace("|============================================|");
+    log_trace("| ↓  RECEIVED                                |");
+    log_trace("|   Addr: %-14p  Index: %d", (void*)card, card->index);
+    log_trace("|   State: %-10s  Rating: %-6s  Stability: %.2f",
+        state_label(card->state), rating_label(card->rating), card->stability);
+    log_trace("|--------------------------------------------|");
+
+    log_trace("|    Before Scoring => Correct: %d | Incorrect: %d", card->correct_tally, card->incorrect_tally);
     if (strcmp(english_word, en_guess) == 0) {
+        card->correct_tally += 1;
+        card->incorrect_tally = 0;
+    log_trace("|    After Scoring => Correct: %d | Incorrect: %d", card->correct_tally, card->incorrect_tally);
         return CORRECT_GUESS;
     } else {
+        card->incorrect_tally += 1;
+    log_trace("|    After Scoring => Correct: %d | Incorrect: %d", card->correct_tally, card->incorrect_tally);
         return INCORRECT_GUESS;
     }
 
     return INTERNAL_ERROR;
 }
 
-void log_review_date(Flashcard *card) {
-    time_t today = time(NULL);
-
-    card->last_review = today;
-    update_flashcard(card);
-}

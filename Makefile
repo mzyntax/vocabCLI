@@ -1,8 +1,37 @@
 CFLAGS =  -Wall -Wextra -Werror -pedantic -g
 
+
+#Just use this to compile the program
+
 cli : cli.c servicer.c storagelib.c
 	mkdir -p build
-	gcc $(CFLAGS) cli.c servicer.c storagelib.c logger.c flashcard_queue/queue.c flashcard_system/spaced_repetition.c -o build/cli -lm
+	gcc $(CFLAGS) cli.c cards.c servicer.c storagelib.c logger.c flashcard_queue/queue.c flashcard_system/spaced_repetition.c -o build/cli -lm
+
+
+
+
+
+
+
+
+
+
+
+#| ############################# Ignore Below ############################# |#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

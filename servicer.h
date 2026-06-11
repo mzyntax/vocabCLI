@@ -32,7 +32,7 @@ int fsrs_based_queue(Flashcard *card);
 
 int get_queue_capacity(QueueType queue);
 
-Flashcard pull_from_queue(QueueType queue);
+int pull_from_queue(QueueType queue, Flashcard *card);
 
 void log_reviewed_card(Flashcard *card, int difficulty);
 
@@ -40,4 +40,4 @@ int edit_flashcard_attribute(Flashcard *card, int choice, char *edit);
 
 int submit_flashcard_data(char *en_word, char *es_word);
 
-ScoreOutcome score_english_translation(Flashcard *card, char *en_guess);
+ScoreOutcome score_attempt(Flashcard *card, char *en_guess);

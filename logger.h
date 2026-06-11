@@ -27,3 +27,6 @@ int mark_file(const char *file, const char *output, ...);
 
 int log_to_file(int level, const char *file, int line, const char *msg, ...);
 
+const char *state_label(int state);
+
+const char *rating_label(int rating);
